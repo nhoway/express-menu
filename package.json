@@ -1,0 +1,11 @@
+{
+  "name": "express-menu",
+  "version": "1.0.0",
+  "description": "Javascript HTML menu generator for Express",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "nhoway",
+  "license": "MIT"
+}
