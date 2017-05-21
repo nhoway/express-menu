@@ -40,8 +40,11 @@ function Menu (options) {
   }
 
   this.items = items
-  //this.conf = require('menu-config');
-  this.conf = configuration
+  this.conf = require('./menu-config');
+  //this.conf = configuration
+  for (var key in configuration) {
+    this.conf[key] = configuration[key];
+  }
 }
 
 /**
