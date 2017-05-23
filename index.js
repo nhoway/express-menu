@@ -41,7 +41,7 @@ function Menu (options) {
 
   this.items = items
   this.conf = require('./menu-config');
-  //this.conf = configuration
+
   for (var key in configuration) {
     this.conf[key] = configuration[key];
   }
@@ -55,24 +55,66 @@ function Menu (options) {
 Menu.prototype.render = function render () {
   var html = this.conf['nav_tag_open'];
   this.items = this._prepareItems(this.items);
-  var itemsKeys = Object.keys(this.items);
-  console.log(itemsKeys);
-  for (var i = 0; i < itemsKeys.length; i++) {
-    html += this._renderItem(this.items[itemsKeys[i]]);
+  for (var key in this.items) {
+    html += this._renderItem(this.items[key]);
   }
   html += this.conf['nav_tag_close'];
-  console.log(">>> END <<<")
   return html;
+}
+
+/**
+ * Add menu item.
+ * @public
+ *
+ * @param {object} [items] Items to add in the menu
+ */
+
+Menu.prototype.addItems = function addItems (items) {
+  var itemsToAdd = items !== undefined
+    ? items
+    : [];
+  for (var i = 0; i < itemsToAdd.length; i++) {
+    this.items.push(itemsToAdd[i]);
+  }
+  return this;
+}
+
+/**
+ * Add item pin.
+ * @public
+ *
+ * @param {string} [itemId] Id of the target item
+ * @param {object} [pins] Pins to add to the item
+ */
+
+Menu.prototype.addPins = function addPins (itemId, pins) {
+  var pinsToAdd = pins !== undefined
+    ? pins
+    : [];
+  for (var i = 0; i < this.items.length; i++) {
+    if (this.items[i][this.conf['menu_id']] == itemId) {
+      for (var j = 0; j < pinsToAdd.length; j++) {
+        if (typeof this.items[i][this.conf['menu_pins']] !== 'object') {
+          this.items[i][this.conf['menu_pins']] = [];
+        }
+        this.items[i][this.conf['menu_pins']].push(pinsToAdd[j]);
+      }
+    }
+  }
+  return this;
 }
 
 /**
  * Prepare menu items setting each item its children
  * @private
+ *
+ * @param {object} [data] Items to add to parent
+ * @param {integer} [parent] Id of the parent
  */
 Menu.prototype._prepareItems = function prepareItems(data, parent = null) {
   var items = {};
   for (var i = 0; i < data.length; i++) {
-    if (data[i][this.conf['menu_parent']] == parent) {
+    if (data[i][this.conf['menu_parent']] == parent && data[i][this.conf['menu_id']] != parent) {
       items[data[i][this.conf['menu_order']]] = data[i];
       items[data[i][this.conf['menu_order']]]['children'] = this._prepareItems(
         data,
@@ -86,11 +128,113 @@ Menu.prototype._prepareItems = function prepareItems(data, parent = null) {
 /**
  * Render menu item with its children
  * @private
+ *
+ * @param {object} [data] Items to render
+ * @param {integer} [depth] Depth in the parent/child three
  */
-Menu.prototype._renderItem = function renderItem(data, prof = 0) {
-  return this.conf['item_tag_open'] +
-  '<a href="' + data['slug'] + '">' +
-    '[icon = ' + data['icon'] + '] ' + data['name'] +
-  '</a>' +
-  this.conf['item_tag_close'];
+Menu.prototype._renderItem = function renderItem(data, depth = 0) {
+  var html = this._renderTagParameters(this.conf['item_tag_open'], data['item_tag']);
+
+  html += '<a href="' + data[this.conf['menu_link']] + '">';
+
+  if (data[this.conf['menu_icon']] !== undefined) {
+    html += String.format(
+      this.conf['item_html_icon'],
+      data[this.conf['menu_icon']]
+    );
+  }
+  else {
+    html += String.format(
+      this.conf['item_html_icon'],
+      this.conf['default_menu_icon']
+    );
+  }
+
+  if (data[this.conf['menu_label']] !== undefined) {
+    html += String.format(
+      this.conf['item_html_label'],
+      data[this.conf['menu_label']]
+    );
+  }
+
+  if (typeof data[this.conf['menu_pins']] === 'object' || Object.keys(data['children']).length > 0) {
+    html += this.conf['item_pin_open'];
+    if (Object.keys(data['children']).length > 0) {
+      html += this.conf['item_pin_child'];
+    }
+    if (typeof data[this.conf['menu_pins']] === 'object') {
+      for (var i = data[this.conf['menu_pins']].length - 1; i >= 0; i--) {
+        html += String.format(
+          this.conf['item_pin_html'],
+          data[this.conf['menu_pins']][i]['content'],
+          data[this.conf['menu_pins']][i]['class']
+        );
+      }
+    }
+    html += this.conf['item_pin_close'];
+  }
+
+  html += '</a>';
+
+  if (Object.keys(data['children']).length > 0) {
+    html += this.conf['children_tag_open'];
+    for (var child in data['children']) {
+      html += this._renderItem(data['children'][child], depth + 1);
+    }
+    html += this.conf['children_tag_close'];
+  }
+
+  html += this.conf['item_tag_close'];
+  return html;
+}
+
+/**
+ * Render item tag with its given parameters
+ * @private
+ *
+ * @param {string} [tag] HTML tag to add parameter in
+ * @param {object} [parameters] Parameters to include
+ */
+Menu.prototype._renderTagParameters = function renderTagParameters(tag, parameters) {
+  if (tag.indexOf("{0}") >= 0) {
+    var paramsToAdd = parameters !== undefined
+      ? parameters
+      : [];
+    // TODO : add parameters contained in the tag string to the parameters array
+    // Merge parameters values if parameters names are equals
+    var mergedParams = {};
+    for (var i = 0; i < paramsToAdd.length; i++) {
+      if (mergedParams[paramsToAdd[i]['name']] !== undefined) {
+        mergedParams[paramsToAdd[i]['name']] += paramsToAdd[i]['value'];
+      }
+      else {
+        mergedParams[paramsToAdd[i]['name']] = paramsToAdd[i]['value'] + ' ';
+      }
+    }
+    var html = "";
+    for (var key in mergedParams) {
+      html += ' ' + key + '="' + mergedParams[key] + '"';
+    }
+    return String.format(tag, html);
+  }
+  else {
+    return tag;
+  }
+}
+
+/**
+ * Adding String Format Method
+ *
+ */
+
+if (!String.format) {
+  String.format = function(format) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return format.replace(/{(\d+)}/g, function(match, number) {
+      return typeof args[number] != 'undefined'
+        ? args[number]
+        : match
+      ;
+    });
+  };
 }
