@@ -7,13 +7,16 @@ module.exports = {
   'menu_icon':          'icon',
   'menu_pins':          'pins',
 
-  'default_menu_icon':  'fa fa-circle-o',
+  'default_menu_icon':  'fa-circle-o',
 
   'nav_tag_open':       '<ul>',
   'nav_tag_close':      '</ul>',
 
   'item_tag_open':      '<li{0}>',
   'item_tag_close':     '</li>',
+
+  'item_link_open':     '<a{0}>',
+  'item_link_close':    '</a>',
 
   'item_active_class':  'active',
 

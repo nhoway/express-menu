@@ -133,9 +133,19 @@ Menu.prototype._prepareItems = function prepareItems(data, parent = null) {
  * @param {integer} [depth] Depth in the parent/child three
  */
 Menu.prototype._renderItem = function renderItem(data, depth = 0) {
-  var html = this._renderTagParameters(this.conf['item_tag_open'], data['item_tag']);
+  let html = this._renderTagParameters(this.conf['item_tag_open'], data['item_tag']);
 
-  html += '<a href="' + data[this.conf['menu_link']] + '">';
+  if (data[this.conf['menu_link']] !== undefined) {
+    let href = {"name": "href", "value": data[this.conf['menu_link']]};
+    if (data['item_link'] !== undefined) {
+      data['item_link'].push(href);
+    }
+    else {
+      data['item_link'] = [href];
+    }
+  }
+
+  html += this._renderTagParameters(this.conf['item_link_open'], data['item_link']);
 
   if (data[this.conf['menu_icon']] !== undefined) {
     html += String.format(
@@ -163,7 +173,7 @@ Menu.prototype._renderItem = function renderItem(data, depth = 0) {
       html += this.conf['item_pin_child'];
     }
     if (typeof data[this.conf['menu_pins']] === 'object') {
-      for (var i = data[this.conf['menu_pins']].length - 1; i >= 0; i--) {
+      for (let i = data[this.conf['menu_pins']].length - 1; i >= 0; i--) {
         html += String.format(
           this.conf['item_pin_html'],
           data[this.conf['menu_pins']][i]['content'],
@@ -174,7 +184,7 @@ Menu.prototype._renderItem = function renderItem(data, depth = 0) {
     html += this.conf['item_pin_close'];
   }
 
-  html += '</a>';
+  html += this.conf['item_link_close'];
 
   if (Object.keys(data['children']).length > 0) {
     html += this.conf['children_tag_open'];
@@ -197,12 +207,11 @@ Menu.prototype._renderItem = function renderItem(data, depth = 0) {
  */
 Menu.prototype._renderTagParameters = function renderTagParameters(tag, parameters) {
   if (tag.indexOf("{0}") >= 0) {
-    var paramsToAdd = parameters !== undefined
+    let paramsToAdd = parameters !== undefined
       ? parameters
       : [];
-    // TODO : add parameters contained in the tag string to the parameters array
     // Merge parameters values if parameters names are equals
-    var mergedParams = {};
+    let mergedParams = {};
     for (var i = 0; i < paramsToAdd.length; i++) {
       if (mergedParams[paramsToAdd[i]['name']] !== undefined) {
         mergedParams[paramsToAdd[i]['name']] += paramsToAdd[i]['value'];
@@ -211,9 +220,21 @@ Menu.prototype._renderTagParameters = function renderTagParameters(tag, paramete
         mergedParams[paramsToAdd[i]['name']] = paramsToAdd[i]['value'] + ' ';
       }
     }
-    var html = "";
-    for (var key in mergedParams) {
-      html += ' ' + key + '="' + mergedParams[key] + '"';
+    // Complete parameters already contained in the tag string from mergedParams
+    for (let key in mergedParams) {
+      let pos = tag.indexOf(key + "=");
+      if (pos >= 0) {
+        tag = tag.substr(0, pos + key.length + 2) + mergedParams[key] +
+        tag.substr(pos + key.length + 2, tag.length);
+        mergedParams[key] = "";
+      }
+    }
+    // Add the others parameters to the tag string
+    let html = "";
+    for (let key in mergedParams) {
+      if (mergedParams[key].length > 0) {
+        html += ' ' + key + '="' + mergedParams[key] + '"';
+      }
     }
     return String.format(tag, html);
   }
