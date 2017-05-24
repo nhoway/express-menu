@@ -1,4 +1,5 @@
 module.exports = {
+  // Items array keys
   'menu_id':            'id',
   'menu_order':         'order',
   'menu_label':         'label',
@@ -9,6 +10,7 @@ module.exports = {
 
   'default_menu_icon':  'fa-circle-o',
 
+  // Inner items HTML tags
   'nav_tag_open':       '<ul>',
   'nav_tag_close':      '</ul>',
 
@@ -30,6 +32,7 @@ module.exports = {
 
   'item_divider':       '<li class="divider"></li>',
 
+  // Specific HTML tags for children
   'children_tag_open':  '<ul>',
   'children_tag_close': '</ul>'
 };
