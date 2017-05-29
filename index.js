@@ -113,13 +113,31 @@ Menu.prototype.addPins = function addPins (itemId, pins) {
  */
 Menu.prototype._prepareItems = function prepareItems(data, parent = null) {
   var items = {};
-  for (var i = 0; i < data.length; i++) {
+  // Create parent / children tree
+  for (let i = 0; i < data.length; i++) {
     if (data[i][this.conf['menu_parent']] == parent && data[i][this.conf['menu_id']] != parent) {
       items[data[i][this.conf['menu_order']]] = data[i];
       items[data[i][this.conf['menu_order']]]['children'] = this._prepareItems(
         data,
         data[i][this.conf['menu_id']]
       );
+      // TODO : Set active class using given route
+      if (items[data[i][this.conf['menu_order']]]['link'] === this.conf['menu_active_route']) {
+        // This is active !
+      }
+    }
+  }
+  // Add specific parent classes
+  if (typeof this.conf['parent_tag_parameters'] === "object") {
+    for (let itemKey in items) {
+      if (Object.keys(items[itemKey]['children']).length > 0) {
+        if (typeof items[itemKey]['item_tag'] !== "object") {
+          items[itemKey]['item_tag'] = this.conf['parent_tag_parameters'];
+        }
+        else {
+          items[itemKey]['item_tag'] = items[itemKey]['item_tag'].concat(this.conf['parent_tag_parameters']);
+        }
+      }
     }
   }
   return items;
