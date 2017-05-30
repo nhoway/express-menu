@@ -21,7 +21,7 @@ function Menu (options) {
     return new Menu(options);
   }
 
-  var opts = options || {}
+  var opts = options || {};
 
   var items = opts.items !== undefined
     ? opts.items
@@ -80,24 +80,24 @@ Menu.prototype.addItems = function addItems (items) {
 }
 
 /**
- * Add item pin.
+ * Add item flag.
  * @public
  *
  * @param {string} [itemId] Id of the target item
- * @param {object} [pins] Pins to add to the item
+ * @param {object} [flags] Flags to add to the item
  */
 
-Menu.prototype.addPins = function addPins (itemId, pins) {
-  var pinsToAdd = pins !== undefined
-    ? pins
+Menu.prototype.addFlags = function addFlags (itemId, flags) {
+  var flagsToAdd = flags !== undefined
+    ? flags
     : [];
   for (var i = 0; i < this.items.length; i++) {
     if (this.items[i][this.conf['menu_id']] == itemId) {
-      for (var j = 0; j < pinsToAdd.length; j++) {
-        if (typeof this.items[i][this.conf['menu_pins']] !== 'object') {
-          this.items[i][this.conf['menu_pins']] = [];
+      for (var j = 0; j < flagsToAdd.length; j++) {
+        if (typeof this.items[i][this.conf['menu_flags']] !== 'object') {
+          this.items[i][this.conf['menu_flags']] = [];
         }
-        this.items[i][this.conf['menu_pins']].push(pinsToAdd[j]);
+        this.items[i][this.conf['menu_flags']].push(flagsToAdd[j]);
       }
     }
   }
@@ -112,19 +112,30 @@ Menu.prototype.addPins = function addPins (itemId, pins) {
  * @param {integer} [parent] Id of the parent
  */
 Menu.prototype._prepareItems = function prepareItems(data, parent = null) {
-  var items = {};
+  let items = {};
+  let activeClass = [{
+    "name":  "class",
+    "value": this.conf['item_active_class']
+  }];
   // Create parent / children tree
   for (let i = 0; i < data.length; i++) {
     if (data[i][this.conf['menu_parent']] == parent && data[i][this.conf['menu_id']] != parent) {
-      items[data[i][this.conf['menu_order']]] = data[i];
-      items[data[i][this.conf['menu_order']]]['children'] = this._prepareItems(
+      let item = data[i];
+      item['children'] = this._prepareItems(
         data,
         data[i][this.conf['menu_id']]
       );
-      // TODO : Set active class using given route
-      if (items[data[i][this.conf['menu_order']]]['link'] === this.conf['menu_active_route']) {
-        // This is active !
+      // Set active class using given route
+      if (item['link'] === this.conf['menu_active_link']) {
+        console.log(item['label']);
+        if (typeof item['item_tag'] !== "object") {
+          item['item_tag'] = activeClass;
+        }
+        else {
+          item['item_tag'] = items[data[i]]['item_tag'].concat(activeClass);
+        }
       }
+      items[data[i][this.conf['menu_order']]] = item;
     }
   }
   // Add specific parent classes
@@ -174,7 +185,7 @@ Menu.prototype._renderItem = function renderItem(data, depth = 0) {
   else {
     html += String.format(
       this.conf['item_html_icon'],
-      this.conf['default_menu_icon']
+      this.conf['menu_default_icon']
     );
   }
 
@@ -185,21 +196,21 @@ Menu.prototype._renderItem = function renderItem(data, depth = 0) {
     );
   }
 
-  if (typeof data[this.conf['menu_pins']] === 'object' || Object.keys(data['children']).length > 0) {
-    html += this.conf['item_pin_open'];
+  if (typeof data[this.conf['menu_flags']] === 'object' || Object.keys(data['children']).length > 0) {
+    html += this.conf['item_flag_open'];
     if (Object.keys(data['children']).length > 0) {
-      html += this.conf['item_pin_child'];
+      html += this.conf['item_flag_child'];
     }
-    if (typeof data[this.conf['menu_pins']] === 'object') {
-      for (let i = data[this.conf['menu_pins']].length - 1; i >= 0; i--) {
+    if (typeof data[this.conf['menu_flags']] === 'object') {
+      for (let i = data[this.conf['menu_flags']].length - 1; i >= 0; i--) {
         html += String.format(
-          this.conf['item_pin_html'],
-          data[this.conf['menu_pins']][i]['content'],
-          data[this.conf['menu_pins']][i]['class']
+          this.conf['item_flag_html'],
+          data[this.conf['menu_flags']][i]['content'],
+          data[this.conf['menu_flags']][i]['class']
         );
       }
     }
-    html += this.conf['item_pin_close'];
+    html += this.conf['item_flag_close'];
   }
 
   html += this.conf['item_link_close'];
