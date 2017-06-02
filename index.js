@@ -42,24 +42,11 @@ function Menu (options) {
   this.items = items
   this.conf = require('./menu-config');
 
-  for (var key in configuration) {
+  for (let key in configuration) {
     this.conf[key] = configuration[key];
   }
-}
 
-/**
- * Render the menu as HTML code.
- * @public
- */
-
-Menu.prototype.render = function render () {
-  var html = this.conf['nav_tag_open'];
-  this.items = this._prepareItems(this.items);
-  for (var key in this.items) {
-    html += this._renderItem(this.items[key]);
-  }
-  html += this.conf['nav_tag_close'];
-  return html;
+  return this;
 }
 
 /**
@@ -70,11 +57,10 @@ Menu.prototype.render = function render () {
  */
 
 Menu.prototype.addItems = function addItems (items) {
-  var itemsToAdd = items !== undefined
-    ? items
-    : [];
-  for (var i = 0; i < itemsToAdd.length; i++) {
-    this.items.push(itemsToAdd[i]);
+  if (typeof items === "object") {
+    for (var i = 0; i < itemsToAdd.length; i++) {
+      this.items.push(itemsToAdd[i]);
+    }
   }
   return this;
 }
@@ -88,142 +74,171 @@ Menu.prototype.addItems = function addItems (items) {
  */
 
 Menu.prototype.addFlags = function addFlags (itemId, flags) {
-  var flagsToAdd = flags !== undefined
-    ? flags
-    : [];
-  for (var i = 0; i < this.items.length; i++) {
-    if (this.items[i][this.conf['menu_id']] == itemId) {
-      for (var j = 0; j < flagsToAdd.length; j++) {
-        if (typeof this.items[i][this.conf['menu_flags']] !== 'object') {
-          this.items[i][this.conf['menu_flags']] = [];
+  if (typeof flags === "object") {
+    for (var i = 0; i < this.items.length; i++) {
+      if (this.items[i][this.conf['menu_id']] == itemId) {
+        for (var j = 0; j < flags.length; j++) {
+          if (typeof this.items[i][this.conf['menu_flags']] !== 'object') {
+            this.items[i][this.conf['menu_flags']] = [];
+          }
+          this.items[i][this.conf['menu_flags']].push(flags[j]);
         }
-        this.items[i][this.conf['menu_flags']].push(flagsToAdd[j]);
       }
     }
   }
   return this;
 }
 
-/**
- * Prepare menu items setting each item its children
- * @private
- *
- * @param {object} [data] Items to add to parent
- * @param {integer} [parent] Id of the parent
- */
+ /**
+  * Prepare menu items setting each item its children
+  * @private
+  *
+  * @param {object} [data] Items to add to parent
+  * @param {integer} [parent] Id of the parent
+  */
 Menu.prototype._prepareItems = function prepareItems(data, parent = null) {
   let items = {};
-  let activeClass = [{
-    "name":  "class",
-    "value": this.conf['item_active_class']
-  }];
   // Create parent / children tree
   for (let i = 0; i < data.length; i++) {
     if (data[i][this.conf['menu_parent']] == parent && data[i][this.conf['menu_id']] != parent) {
       let item = data[i];
+      // Set children
       item['children'] = this._prepareItems(
         data,
         data[i][this.conf['menu_id']]
       );
-      // Set active class using given route
-      if (item['link'] === this.conf['menu_active_link']) {
-        console.log(item['label']);
-        if (typeof item['item_tag'] !== "object") {
-          item['item_tag'] = activeClass;
+      // Set active state
+      if (item[this.conf['menu_link']] === this.conf['active_value']) {
+        item['isactive'] = true;
+      }
+      if (this.conf['active_recursive']) {
+        for (let key in item['children']) {
+          if (item['children'][key]['isactive']) {
+            item['isactive'] = true;
+            break;
+          }
         }
-        else {
-          item['item_tag'] = items[data[i]]['item_tag'].concat(activeClass);
-        }
+      }
+      // Set parent state
+      if (Object.keys(item['children']).length > 0) {
+        item["isparent"] = true;
+      }
+      // Set child state
+      if (parent !== null) {
+        item["ischild"] = true;
       }
       items[data[i][this.conf['menu_order']]] = item;
-    }
-  }
-  // Add specific parent classes
-  if (typeof this.conf['parent_tag_parameters'] === "object") {
-    for (let itemKey in items) {
-      if (Object.keys(items[itemKey]['children']).length > 0) {
-        if (typeof items[itemKey]['item_tag'] !== "object") {
-          items[itemKey]['item_tag'] = this.conf['parent_tag_parameters'];
-        }
-        else {
-          items[itemKey]['item_tag'] = items[itemKey]['item_tag'].concat(this.conf['parent_tag_parameters']);
-        }
-      }
     }
   }
   return items;
 }
 
 /**
+ * Render the menu as HTML code.
+ * @public
+ */
+Menu.prototype.render = function render () {
+  var html = this.conf['menu_html_open'];
+  this.items = this._prepareItems(this.items);
+  for (var key in this.items) {
+    html += this._renderItem(this.items[key]);
+  }
+  html += this.conf['menu_html_close'];
+  return html;
+}
+
+/**
+ * List tags contained in given string
+ * @private
+ *
+ * @param {string} [html] Content to search tags in
+ */
+ Menu.prototype._listItemTags = function listItemTags(html) {
+   let tags = html.match(/\{\{([a-z_]+)\}\}/gi);
+   for (var i = 0; i < tags.length; i++) {
+     tags[i] = tags[i].substring(2, tags[i].length - 2);
+   }
+   return tags;
+ }
+
+/**
  * Render menu item with its children
  * @private
  *
- * @param {object} [data] Items to render
+ * @param {object} [item] Item to render
  * @param {integer} [depth] Depth in the parent/child three
  */
-Menu.prototype._renderItem = function renderItem(data, depth = 0) {
-  let html = this._renderTagParameters(this.conf['item_tag_open'], data['item_tag']);
-
-  if (data[this.conf['menu_link']] !== undefined) {
-    let href = {"name": "href", "value": data[this.conf['menu_link']]};
-    if (data['item_link'] !== undefined) {
-      data['item_link'].push(href);
+Menu.prototype._renderItem = function renderItem(item, tag = 'item', depth = 0) {
+  if (item[this.conf['menu_label']] === this.conf['menu_divider_label']) {
+    return this.conf['item_divider'];
+  }
+  let html = this.conf[tag]['html'];
+  let states = ["active", "parent", "child"];
+  let subtags = this._listItemTags(html);
+  for (let i = 0; i < subtags.length; i++) {
+    // Recursive call for sub html tags
+    if (subtags[i].substr(0,4) === "item") {
+      html = html.replace("{{" + subtags[i] + "}}", this._renderItem(item, subtags[i], depth));
     }
-    else {
-      data['item_link'] = [href];
-    }
-  }
-
-  html += this._renderTagParameters(this.conf['item_link_open'], data['item_link']);
-
-  if (data[this.conf['menu_icon']] !== undefined) {
-    html += String.format(
-      this.conf['item_html_icon'],
-      data[this.conf['menu_icon']]
-    );
-  }
-  else {
-    html += String.format(
-      this.conf['item_html_icon'],
-      this.conf['menu_default_icon']
-    );
-  }
-
-  if (data[this.conf['menu_label']] !== undefined) {
-    html += String.format(
-      this.conf['item_html_label'],
-      data[this.conf['menu_label']]
-    );
-  }
-
-  if (typeof data[this.conf['menu_flags']] === 'object' || Object.keys(data['children']).length > 0) {
-    html += this.conf['item_flag_open'];
-    if (Object.keys(data['children']).length > 0) {
-      html += this.conf['item_flag_child'];
-    }
-    if (typeof data[this.conf['menu_flags']] === 'object') {
-      for (let i = data[this.conf['menu_flags']].length - 1; i >= 0; i--) {
-        html += String.format(
-          this.conf['item_flag_html'],
-          data[this.conf['menu_flags']][i]['content'],
-          data[this.conf['menu_flags']][i]['class']
-        );
+    //
+    else if (subtags[i].substr(0,4) === "menu") {
+      if (typeof item[this.conf[subtags[i]]] === "string") {
+        html = html.replace("{{" + subtags[i] + "}}", item[this.conf[subtags[i]]]);
+      }
+      else if (typeof this.conf[subtags[i] + '_default'] === "string") {
+        html = html.replace("{{" + subtags[i] + "}}", this.conf[subtags[i] + '_default']);
+      }
+      else {
+        html = html.replace("{{" + subtags[i] + "}}", "");
       }
     }
-    html += this.conf['item_flag_close'];
-  }
-
-  html += this.conf['item_link_close'];
-
-  if (Object.keys(data['children']).length > 0) {
-    html += this.conf['children_tag_open'];
-    for (var child in data['children']) {
-      html += this._renderItem(data['children'][child], depth + 1);
+    else if (subtags[i] === "parameters") {
+      if (typeof item[tag] !== "object") item[tag] = [];
+      for (let j = 0; j < states.length; j++) {
+        if (item['is' + states[j]] && typeof this.conf[tag][states[j]] === "object") {
+          item[tag] = item[tag].concat(this.conf[tag][states[j]]);
+        }
+      }
+      if (typeof this.conf[tag]['default'] === "object") {
+        item[tag] = item[tag].concat(this.conf[tag]['default']);
+      }
+      html = html.replace("{{" + subtags[i] + "}}", this._renderTagParameters(item[tag]));
     }
-    html += this.conf['children_tag_close'];
+    else if (subtags[i] === "children") {
+      let htmlChildren = "";
+      if (Object.keys(item['children']).length > 0) {
+        htmlChildren = this.conf['menu_children_open'];
+        for (var child in item['children']) {
+          htmlChildren += this._renderItem(item['children'][child], 'item', depth + 1);
+        }
+        htmlChildren += this.conf['menu_children_close'];
+      }
+      html = html.replace("{{" + subtags[i] + "}}", htmlChildren);
+    }
+    else if (subtags[i] === "flags") {
+      let htmlFlags = "";
+      for (let j = 0; j < states.length; j++) {
+        if (item['is' + states[j]] && this.conf['flags'][states[j]] !== undefined) {
+          htmlFlags += this.conf['flags'][states[j]];
+        }
+      }
+      if (typeof item[this.conf['menu_flags']] === "object") {
+        for (let j = 0; j < item[this.conf['menu_flags']].length; j++) {
+          htmlFlags += this.conf['flags']['default']
+            .replace("{{class}}", item[this.conf['menu_flags']][j]['class'])
+            .replace("{{content}}", item[this.conf['menu_flags']][j]['content']);
+        }
+      }
+      if (htmlFlags.length > 0) {
+        html = html.replace(
+          "{{flags}}",
+          this.conf['flags']['html'].replace("{{flags}}", htmlFlags));
+      }
+      else {
+        html = html.replace("{{flags}}", "");
+      }
+    }
   }
-
-  html += this.conf['item_tag_close'];
   return html;
 }
 
@@ -234,42 +249,27 @@ Menu.prototype._renderItem = function renderItem(data, depth = 0) {
  * @param {string} [tag] HTML tag to add parameter in
  * @param {object} [parameters] Parameters to include
  */
-Menu.prototype._renderTagParameters = function renderTagParameters(tag, parameters) {
-  if (tag.indexOf("{0}") >= 0) {
-    let paramsToAdd = parameters !== undefined
-      ? parameters
-      : [];
+Menu.prototype._renderTagParameters = function renderTagParameters(parameters) {
+  let html = "";
+  if (typeof parameters === "object") {
     // Merge parameters values if parameters names are equals
     let mergedParams = {};
-    for (var i = 0; i < paramsToAdd.length; i++) {
-      if (mergedParams[paramsToAdd[i]['name']] !== undefined) {
-        mergedParams[paramsToAdd[i]['name']] += paramsToAdd[i]['value'];
+    for (var i = 0; i < parameters.length; i++) {
+      if (mergedParams[parameters[i]['name']] !== undefined) {
+        mergedParams[parameters[i]['name']] += parameters[i]['value'];
       }
       else {
-        mergedParams[paramsToAdd[i]['name']] = paramsToAdd[i]['value'] + ' ';
+        mergedParams[parameters[i]['name']] = parameters[i]['value'] + ' ';
       }
     }
-    // Complete parameters already contained in the tag string from mergedParams
-    for (let key in mergedParams) {
-      let pos = tag.indexOf(key + "=");
-      if (pos >= 0) {
-        tag = tag.substr(0, pos + key.length + 2) + mergedParams[key] +
-        tag.substr(pos + key.length + 2, tag.length);
-        mergedParams[key] = "";
-      }
-    }
-    // Add the others parameters to the tag string
-    let html = "";
+    // Render parameters HTML code
     for (let key in mergedParams) {
       if (mergedParams[key].length > 0) {
         html += ' ' + key + '="' + mergedParams[key] + '"';
       }
     }
-    return String.format(tag, html);
   }
-  else {
-    return tag;
-  }
+  return html;
 }
 
 /**
