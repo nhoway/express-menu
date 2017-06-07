@@ -1,0 +1,10 @@
+{
+  "name": "Menu",
+  "base": "Model",
+  "properties": {
+    "id": {"type": "String", "required": true},
+    "label": {"type": "String", "required": true},
+    "link": {"type": "String"},
+    "icon": {"type": "String"}
+  }
+}

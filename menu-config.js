@@ -11,7 +11,7 @@ module.exports = {
   'menu_divider_label':   'divider',
 
   // Active item :
-  'active_value':          'my/active/link',
+  'active_value':         'my/active/link',
   'active_recursive':     true,
 
   'menu_html_open':       '<ul>',
@@ -24,7 +24,7 @@ module.exports = {
   'item': {
     'html':       '<li{{parameters}}>'+
                   '<a href="{{menu_link}}">'+
-                  '<i class="fa {{menu_icon}}"></i><span>{{menu_label}}</span>{{flags}}'+
+                  '<i class="fa {{menu_icon}}"></i><span>{{menu_label}}</span>{{loop_flags}}'+
                   '</a>'+
                   '{{children}}</li>\n',
     'parent':     [{'name': 'class', 'value': 'treeview'}],
