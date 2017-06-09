@@ -72,6 +72,22 @@ Menu.prototype.addItems = function addItems (items) {
 }
 
 /**
+ * Add menu configuration entries.
+ * @public
+ *
+ * @param {object} [configuration] Configuration entrie(s) to instanciate
+ */
+
+Menu.prototype.addConfiguration = function addConfiguration (configuration) {
+  if (typeof configuration === "object") {
+    for (let key in configuration) {
+      this.conf[key] = configuration[key];
+    }
+  }
+  return this;
+}
+
+/**
  * Add item flag.
  * @public
  *
@@ -181,7 +197,6 @@ Menu.prototype.render = function render () {
  * @param {integer} [depth] Depth in the parent/child three
  */
 Menu.prototype._renderItem = function renderItem(item, tag = 'item', depth = 0) {
-  console.log(item)
   if (item[this.conf['menu_label']] === this.conf['menu_divider_label']) {
     return this.conf['item_divider'];
   }
